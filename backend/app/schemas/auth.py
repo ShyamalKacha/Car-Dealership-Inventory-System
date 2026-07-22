@@ -30,6 +30,20 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+    @field_validator("email")
+    @classmethod
+    def validate_email_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Email must not be empty")
+        return v.strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_not_empty(cls, v: str) -> str:
+        if not v:
+            raise ValueError("Password must not be empty")
+        return v
+
 
 class RefreshRequest(BaseModel):
     pass  # Token read from cookie, CSRF from header

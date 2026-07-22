@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ADMIN_SECRET_KEY: str
     RATE_LIMIT_LOGIN: str = "5/minute"
     RATE_LIMIT_REGISTER: str = "3/hour"
+    COOKIE_SECURE: bool = True
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 

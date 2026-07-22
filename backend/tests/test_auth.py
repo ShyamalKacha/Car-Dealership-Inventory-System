@@ -1,13 +1,11 @@
 """
-RED tests for the Auth module.
+GREEN tests for the Auth module.
 
-These tests will FAIL because the route handlers raise NotImplementedError.
-This is the expected RED state — implementation follows in the GREEN commit.
+These tests should pass once the auth service and routes are implemented.
 """
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 
 class TestRegister:
@@ -28,11 +26,8 @@ class TestRegister:
         assert data["role"] == "user"
         assert "id" in data
 
-    def test_register_duplicate_email(
-        self, test_client: TestClient, db_session: Session
-    ):
+    def test_register_duplicate_email(self, test_client: TestClient):
         """Registering with an existing email should return 409 Conflict."""
-        # First registration
         test_client.post(
             "/api/auth/register",
             json={
@@ -41,7 +36,6 @@ class TestRegister:
                 "password": "SecurePass1",
             },
         )
-        # Duplicate email
         response = test_client.post(
             "/api/auth/register",
             json={
@@ -56,15 +50,17 @@ class TestRegister:
         self, test_client: TestClient, monkeypatch: pytest.MonkeyPatch
     ):
         """Providing the correct admin_key should create an admin user."""
-        key = "test-admin-key-32-chars-minimum!"
-        monkeypatch.setattr("app.core.config.settings.ADMIN_SECRET_KEY", key)
+        monkeypatch.setattr(
+            "app.core.config.settings.ADMIN_SECRET_KEY",
+            "test-admin-key-32-chars-minimum!",
+        )
         response = test_client.post(
             "/api/auth/register",
             json={
                 "email": "admin@example.com",
                 "username": "adminuser",
                 "password": "AdminPass1",
-                "admin_key": key,
+                "admin_key": "test-admin-key-32-chars-minimum!",
             },
         )
         assert response.status_code == 201
@@ -75,7 +71,9 @@ class TestRegister:
         self, test_client: TestClient, monkeypatch: pytest.MonkeyPatch
     ):
         """An incorrect admin_key should create a regular user."""
-        monkeypatch.setattr("app.core.config.settings.ADMIN_SECRET_KEY", "real-key")
+        monkeypatch.setattr(
+            "app.core.config.settings.ADMIN_SECRET_KEY", "real-key"
+        )
         response = test_client.post(
             "/api/auth/register",
             json={
@@ -125,27 +123,44 @@ class TestRegister:
 
 
 class TestLogin:
-    def test_login_success(
-        self, test_client: TestClient, test_user: object
-    ):
+    def test_login_success(self, test_client: TestClient):
         """Valid credentials should return an access token."""
+        # Register a user first
+        test_client.post(
+            "/api/auth/register",
+            json={
+                "email": "logintest@example.com",
+                "username": "logintest",
+                "password": "TestPass123",
+            },
+        )
+        # Now login
         response = test_client.post(
             "/api/auth/login",
-            json={"email": "test@example.com", "password": "TestPass123"},
+            json={
+                "email": "logintest@example.com",
+                "password": "TestPass123",
+            },
         )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
 
-    def test_login_wrong_password(
-        self, test_client: TestClient, test_user: object
-    ):
+    def test_login_wrong_password(self, test_client: TestClient):
         """Wrong password should return 401."""
+        test_client.post(
+            "/api/auth/register",
+            json={
+                "email": "wrongpass@example.com",
+                "username": "wrongpass",
+                "password": "RealPass1",
+            },
+        )
         response = test_client.post(
             "/api/auth/login",
             json={
-                "email": "test@example.com",
+                "email": "wrongpass@example.com",
                 "password": "WrongPassword1",
             },
         )

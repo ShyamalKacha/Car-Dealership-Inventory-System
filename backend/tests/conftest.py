@@ -2,8 +2,7 @@
 pytest fixtures for the Car Dealership API.
 
 Uses a dedicated test PostgreSQL database (car_dealership_test).
-Each test function gets its own transaction, rolled back after completion
-so tests never leak data to one another.
+Tables are truncated before each test for full isolation.
 """
 
 import os
@@ -28,6 +27,9 @@ parsed = urlparse(str(settings.DATABASE_URL))
 test_path = parsed.path.rsplit("/", 1)[0] + "/car_dealership_test"
 TEST_DATABASE_URL = urlunparse(parsed._replace(path=test_path))
 
+# Cookies use http in tests, not https
+settings.COOKIE_SECURE = False
+
 
 # ---------------------------------------------------------------------------
 # Session-scoped engine — tables created once, dropped at end
@@ -41,17 +43,15 @@ def test_engine():
 
 
 # ---------------------------------------------------------------------------
-# Per-test DB session — transaction is rolled back after each test
+# Clean all rows before each test
 # ---------------------------------------------------------------------------
-@pytest.fixture
-def db_session(test_engine):
-    connection = test_engine.connect()
-    transaction = connection.begin()
-    session = Session(bind=connection)
-    yield session
-    session.close()
-    transaction.rollback()
-    connection.close()
+@pytest.fixture(autouse=True)
+def _clean_tables(test_engine):
+    with test_engine.connect() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            conn.execute(table.delete())
+        conn.commit()
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -63,13 +63,12 @@ def test_client(test_engine):
 
     def _get_test_db():
         connection = test_engine.connect()
-        transaction = connection.begin()
         session = Session(bind=connection)
         try:
             yield session
+            session.commit()
         finally:
             session.close()
-            transaction.rollback()
             connection.close()
 
     app.dependency_overrides[get_db] = _get_test_db
@@ -79,33 +78,41 @@ def test_client(test_engine):
 
 
 # ---------------------------------------------------------------------------
-# Sample users
+# Sample users (for tests that need pre-existing users, e.g. vehicle tests)
 # ---------------------------------------------------------------------------
 @pytest.fixture
-def test_user(db_session: Session) -> User:
+def test_user(test_engine) -> User:
+    connection = test_engine.connect()
+    session = Session(bind=connection)
     user = User(
         email="test@example.com",
         username="testuser",
         hashed_password=hash_password("TestPass123"),
         role="user",
     )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    session.close()
+    connection.close()
     return user
 
 
 @pytest.fixture
-def admin_user(db_session: Session) -> User:
+def admin_user(test_engine) -> User:
+    connection = test_engine.connect()
+    session = Session(bind=connection)
     user = User(
         email="admin@example.com",
         username="adminuser",
         hashed_password=hash_password("AdminPass123"),
         role="admin",
     )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    session.close()
+    connection.close()
     return user
 
 
