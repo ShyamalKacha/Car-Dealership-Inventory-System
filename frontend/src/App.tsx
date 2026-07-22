@@ -5,17 +5,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Dashboard } from "./pages/Dashboard";
-
-function AdminPanel() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <h1 className="text-3xl font-bold">Admin Panel</h1>
-      <p className="mt-2 text-[var(--color-text-secondary)]">
-        Vehicle management coming soon
-      </p>
-    </div>
-  );
-}
+import { Admin } from "./pages/Admin";
 
 function NotFound() {
   return (
@@ -44,7 +34,7 @@ function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <AdminPanel />
+              <Admin />
             </AdminRoute>
           }
         />
