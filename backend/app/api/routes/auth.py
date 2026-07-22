@@ -2,15 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user, limiter
+from app.api.deps import get_db, get_current_user, login_rate_limit, register_rate_limit
 from app.core.config import settings
 from app.core.security import create_access_token, generate_csrf_token
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
-    RefreshRequest,
     RegisterRequest,
-    TokenResponse,
     UserResponse,
 )
 from app.services.auth_service import AuthService
@@ -18,31 +16,23 @@ from app.services.auth_service import AuthService
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/register
-# ---------------------------------------------------------------------------
 @router.post("/register", status_code=201)
-@limiter.limit(settings.RATE_LIMIT_REGISTER)
 async def register(
     request: Request,
     body: RegisterRequest,
     db: Session = Depends(get_db),
+    _rl: None = Depends(register_rate_limit),
 ):
     user = AuthService.register(db, body)
     return UserResponse.model_validate(user)
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/login
-# Returns access token in body + sets httpOnly refresh_token + csrf_token
-# cookies.
-# ---------------------------------------------------------------------------
 @router.post("/login")
-@limiter.limit(settings.RATE_LIMIT_LOGIN)
 async def login(
     request: Request,
     body: LoginRequest,
     db: Session = Depends(get_db),
+    _rl: None = Depends(login_rate_limit),
 ):
     user = AuthService.authenticate(db, body.email, body.password)
     if not user:
@@ -67,17 +57,11 @@ async def login(
     return response
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/refresh
-# Reads refresh_token cookie, verifies X-CSRF-Protection header, rotates
-# the token, and returns a new access token.
-# ---------------------------------------------------------------------------
 @router.post("/refresh")
 async def refresh(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    # CSRF check
     if request.headers.get("X-CSRF-Protection") != "1":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,7 +77,6 @@ async def refresh(
 
     result = AuthService.rotate_refresh_token(db, raw_token)
     if result is None:
-        # Token invalid, expired, or reuse detected — clear cookies
         response = JSONResponse(
             content={"detail": "Invalid or expired refresh token"},
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -126,11 +109,6 @@ async def refresh(
     return response
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/logout
-# Requires a valid access token in the Authorization header.
-# Revokes all refresh tokens for the authenticated user and clears cookies.
-# ---------------------------------------------------------------------------
 @router.post("/logout", status_code=204)
 async def logout(
     request: Request,

@@ -5,10 +5,7 @@ Uses a dedicated test PostgreSQL database (car_dealership_test).
 Tables are truncated before each test for full isolation.
 """
 
-import os
 from urllib.parse import urlparse, urlunparse
-
-os.environ["TESTING"] = "1"  # Disable rate limiting during tests
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.core.config import settings
 from app.core.database import Base
+from app.core.rate_limiter import reset_rate_limiter
 from app.core.security import create_access_token, hash_password
 from app.main import create_app
 from app.models.user import User
@@ -51,6 +49,7 @@ def _clean_tables(test_engine):
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
         conn.commit()
+    reset_rate_limiter()
     yield
 
 

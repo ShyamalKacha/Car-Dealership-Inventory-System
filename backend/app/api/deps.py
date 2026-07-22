@@ -1,34 +1,26 @@
-import os
-
 from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.core.rate_limiter import rate_limit
 from app.core.security import decode_access_token
 from app.models.user import User
 
-# ---------------------------------------------------------------------------
-# Rate limiter — IP-based, in-memory counters (single-server)
-# Disabled during tests via TESTING env var.
-# ---------------------------------------------------------------------------
-limiter = Limiter(
-    key_func=get_remote_address,
-    enabled=not os.getenv("TESTING"),
-)
+# Shorthand rate-limit dependencies
+login_rate_limit = rate_limit(5, 60)      # 5 POST/min to /login
+register_rate_limit = rate_limit(3, 60)   # 3 POST/min to /register
 
 # ---------------------------------------------------------------------------
-# HTTP Bearer scheme — auto-extracts token from Authorization header
+# HTTP Bearer scheme
 # ---------------------------------------------------------------------------
 security_scheme = HTTPBearer(auto_error=False)
 
 
 # ---------------------------------------------------------------------------
-# Database session — guaranteed cleanup via finally
+# Database session
 # ---------------------------------------------------------------------------
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -39,7 +31,7 @@ def get_db() -> Generator[Session, None, None]:
 
 
 # ---------------------------------------------------------------------------
-# Current user extraction — validates JWT, returns User or raises 401
+# Current user
 # ---------------------------------------------------------------------------
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
@@ -69,7 +61,7 @@ def get_current_user(
 
 
 # ---------------------------------------------------------------------------
-# Admin guard — layered on top of get_current_user
+# Admin guard
 # ---------------------------------------------------------------------------
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
