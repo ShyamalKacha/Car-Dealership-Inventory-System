@@ -65,15 +65,15 @@ class TestListVehicles:
             headers=headers,
         )
 
-    def test_list_all(self, test_client: TestClient, admin_headers: dict):
+    def test_list_all(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles")
+        resp = test_client.get("/api/vehicles", headers=user_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert len(data) == 2
 
-    def test_list_empty(self, test_client: TestClient):
-        resp = test_client.get("/api/vehicles")
+    def test_list_empty(self, test_client: TestClient, user_headers: dict):
+        resp = test_client.get("/api/vehicles", headers=user_headers)
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -91,53 +91,55 @@ class TestSearchVehicles:
         ]:
             client.post("/api/vehicles", json=v, headers=headers)
 
-    def test_search_by_make(self, test_client: TestClient, admin_headers: dict):
+    def test_search_by_make(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles/search?make=Toyota")
+        resp = test_client.get("/api/vehicles/search?make=Toyota", headers=user_headers)
         assert resp.status_code == 200
         assert all(v["make"] == "Toyota" for v in resp.json())
 
-    def test_search_by_model(self, test_client: TestClient, admin_headers: dict):
+    def test_search_by_model(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles/search?model=Civic")
+        resp = test_client.get("/api/vehicles/search?model=Civic", headers=user_headers)
         assert resp.status_code == 200
         assert all(v["model"] == "Civic" for v in resp.json())
 
-    def test_search_by_category(self, test_client: TestClient, admin_headers: dict):
+    def test_search_by_category(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles/search?category=TRUCK")
+        resp = test_client.get("/api/vehicles/search?category=TRUCK", headers=user_headers)
         assert resp.status_code == 200
         assert all(v["category"] == "TRUCK" for v in resp.json())
 
-    def test_search_by_price_range(self, test_client: TestClient, admin_headers: dict):
+    def test_search_by_price_range(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
         resp = test_client.get(
-            "/api/vehicles/search?price_min=20000&price_max=26000"
+            "/api/vehicles/search?price_min=20000&price_max=26000",
+            headers=user_headers,
         )
         assert resp.status_code == 200
         for v in resp.json():
             assert 20000 <= float(v["price"]) <= 26000
 
-    def test_search_combined(self, test_client: TestClient, admin_headers: dict):
+    def test_search_combined(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
         resp = test_client.get(
-            "/api/vehicles/search?make=Toyota&category=SUV&price_min=25000"
+            "/api/vehicles/search?make=Toyota&category=SUV&price_min=25000",
+            headers=user_headers,
         )
         assert resp.status_code == 200
         assert len(resp.json()) == 1
         assert resp.json()[0]["model"] == "RAV4"
 
-    def test_search_no_results(self, test_client: TestClient, admin_headers: dict):
+    def test_search_no_results(self, test_client: TestClient, admin_headers: dict, user_headers: dict):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles/search?make=Mazda")
+        resp = test_client.get("/api/vehicles/search?make=Mazda", headers=user_headers)
         assert resp.status_code == 200
         assert resp.json() == []
 
     def test_search_no_params_returns_all(
-        self, test_client: TestClient, admin_headers: dict
+        self, test_client: TestClient, admin_headers: dict, user_headers: dict
     ):
         self._seed(test_client, admin_headers)
-        resp = test_client.get("/api/vehicles/search")
+        resp = test_client.get("/api/vehicles/search", headers=user_headers)
         assert resp.status_code == 200
         assert len(resp.json()) == 4
 
