@@ -4,17 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-
-function Dashboard() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <h1 className="text-3xl font-bold">Welcome to Car Dealership</h1>
-      <p className="mt-2 text-[var(--color-text-secondary)]">
-        Vehicle dashboard coming soon
-      </p>
-    </div>
-  );
-}
+import { Dashboard } from "./pages/Dashboard";
 
 function AdminPanel() {
   return (
