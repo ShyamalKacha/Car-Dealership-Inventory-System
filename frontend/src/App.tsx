@@ -1,8 +1,66 @@
+import { Routes, Route } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
+import { Login } from "./pages/Login";
+import { Register } from "./pages/Register";
+
+function Dashboard() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <h1 className="text-3xl font-bold">Welcome to Car Dealership</h1>
+      <p className="mt-2 text-[var(--color-text-secondary)]">
+        Vehicle dashboard coming soon
+      </p>
+    </div>
+  );
+}
+
+function AdminPanel() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <h1 className="text-3xl font-bold">Admin Panel</h1>
+      <p className="mt-2 text-[var(--color-text-secondary)]">
+        Vehicle management coming soon
+      </p>
+    </div>
+  );
+}
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <h1 className="text-4xl font-bold">404</h1>
+      <p className="mt-2 text-[var(--color-text-secondary)]">Page not found</p>
+    </div>
+  );
+}
+
 function App() {
   return (
-    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex items-center justify-center">
-      <h1 className="text-3xl font-bold">Car Dealership</h1>
-    </div>
+    <Layout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPanel />
+            </AdminRoute>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
   );
 }
 

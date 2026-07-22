@@ -56,7 +56,11 @@ async def login(
     csrf_token = generate_csrf_token()
 
     response = JSONResponse(
-        content={"access_token": access_token, "token_type": "bearer"}
+        content={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse.model_validate(user).model_dump(),
+        }
     )
     _set_refresh_cookie(response, raw_refresh)
     _set_csrf_cookie(response, csrf_token)
@@ -111,7 +115,11 @@ async def refresh(
     csrf_token = generate_csrf_token()
 
     response = JSONResponse(
-        content={"access_token": access_token, "token_type": "bearer"}
+        content={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse.model_validate(user).model_dump(),
+        }
     )
     _set_refresh_cookie(response, new_raw_token)
     _set_csrf_cookie(response, csrf_token)
