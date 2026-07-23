@@ -10,6 +10,7 @@ dist/
 build/
 .venv/
 venv/
+.coverage
 
 # Node
 node_modules/
