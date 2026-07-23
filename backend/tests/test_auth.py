@@ -1,9 +1,3 @@
-"""
-GREEN tests for the Auth module.
-
-These tests should pass once the auth service and routes are implemented.
-"""
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -184,3 +178,85 @@ class TestLogin:
             json={"email": "", "password": ""},
         )
         assert response.status_code == 422
+
+
+class TestRefresh:
+    """Tests for POST /api/auth/refresh — token rotation and CSRF."""
+
+    def _setup_user(self, test_client: TestClient, email: str = "refresh@test.com") -> None:
+        """Register and login a user. The TestClient cookie jar retains
+        the httpOnly refresh_token cookie for subsequent requests."""
+        test_client.post(
+            "/api/auth/register",
+            json={"email": email, "username": email.split("@")[0], "password": "TestPass123"},
+        )
+        test_client.post(
+            "/api/auth/login",
+            json={"email": email, "password": "TestPass123"},
+        )
+
+    def test_refresh_success(self, test_client: TestClient):
+        """A valid refresh token + CSRF header should return a new access token."""
+        self._setup_user(test_client)
+        resp = test_client.post("/api/auth/refresh", headers={"X-CSRF-Protection": "1"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "access_token" in data
+        assert data["token_type"] == "bearer"
+        assert "user" in data
+
+    def test_refresh_missing_csrf(self, test_client: TestClient):
+        """Missing X-CSRF-Protection header should return 401."""
+        self._setup_user(test_client)
+        resp = test_client.post("/api/auth/refresh")  # No CSRF header
+        assert resp.status_code == 401
+
+    def test_refresh_no_cookie(self, test_client: TestClient):
+        """No refresh_token cookie should return 401."""
+        # Note: no _setup_user → no cookies
+        resp = test_client.post("/api/auth/refresh", headers={"X-CSRF-Protection": "1"})
+        assert resp.status_code == 401
+
+    def test_refresh_reuse_detection(self, test_client: TestClient):
+        """Presenting a revoked refresh token should revoke the entire family."""
+        self._setup_user(test_client)
+
+        # Capture the current refresh token value
+        old_cookie = test_client.cookies.get("refresh_token")
+
+        # First refresh — rotates the token (old one is now revoked)
+        resp1 = test_client.post("/api/auth/refresh", headers={"X-CSRF-Protection": "1"})
+        assert resp1.status_code == 200
+
+        # Manually restore the old (now revoked) token
+        test_client.cookies.set("refresh_token", old_cookie)
+
+        # Second refresh with the revoked token → reuse detected
+        resp2 = test_client.post("/api/auth/refresh", headers={"X-CSRF-Protection": "1"})
+        assert resp2.status_code == 401
+
+
+class TestLogout:
+    """Tests for POST /api/auth/logout — token revocation."""
+
+    def _setup_and_get_token(self, test_client: TestClient) -> str:
+        test_client.post(
+            "/api/auth/register",
+            json={"email": "logout@test.com", "username": "logout", "password": "TestPass123"},
+        )
+        resp = test_client.post(
+            "/api/auth/login",
+            json={"email": "logout@test.com", "password": "TestPass123"},
+        )
+        return resp.json()["access_token"]
+
+    def test_logout_success(self, test_client: TestClient):
+        """A valid logout should revoke tokens and return 204."""
+        token = self._setup_and_get_token(test_client)
+        resp = test_client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token}"})
+        assert resp.status_code == 204
+
+    def test_logout_unauthenticated(self, test_client: TestClient):
+        """Logout without a token should return 401."""
+        resp = test_client.post("/api/auth/logout")
+        assert resp.status_code == 401
