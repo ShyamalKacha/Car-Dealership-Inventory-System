@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await api.post("/api/auth/login", { email, password });
     setAccessToken(res.data.access_token);
     setUser(res.data.user);
+    return res.data.user as import("../types").User;
   }, []);
 
   const register = useCallback(

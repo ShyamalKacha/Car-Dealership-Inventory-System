@@ -12,8 +12,10 @@ export function Input({ label, error, className = "", ...props }: InputProps) {
         {label}
       </label>
       <input
-        className={`rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent ${
-          error ? "border-[var(--color-danger)]" : ""
+        className={`rounded-lg border bg-[var(--color-bg-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent ${
+          error
+            ? "border-[var(--color-danger)] focus:ring-[var(--color-danger)]"
+            : "border-[var(--color-border)]"
         } ${className}`}
         {...props}
       />
