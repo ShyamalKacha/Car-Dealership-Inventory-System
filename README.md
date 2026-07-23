@@ -93,9 +93,8 @@ The frontend runs at `http://localhost:5173` and the backend API at `http://loca
 |---|---|
 | **Swagger API Docs** | ![Swagger](screenshots/swagger.png) |
 | **Login Page** | ![Login](screenshots/login.png) |
-| **Dashboard (Admin View)** | ![Dashboard](screenshots/dashboard.png) |
-| **Admin Panel (Light)** | ![Admin Light](screenshots/admin.png) |
-| **Admin Panel (Dark)** | ![Admin Dark](screenshots/admin-dark.png) |
+| **Dashboard (User View)** | ![User Dashboard](screenshots/user-dashboard.png) |
+| **Admin Panel** | ![Admin Light](screenshots/admin.png) |
 
 ## Test Report
 

@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import auth, vehicles
 from app.core.database import Base, engine
@@ -19,7 +21,20 @@ def create_app() -> FastAPI:
         description="Car Dealership Inventory System — RESTful backend",
         version="0.1.0",
         lifespan=lifespan,
+        docs_url=None,  # We override /docs with self-hosted assets below
     )
+
+    # Self-hosted Swagger UI — no CDN dependency
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+    @app.get("/docs", include_in_schema=False)
+    async def custom_swagger_ui_html():
+        return get_swagger_ui_html(
+            openapi_url="/openapi.json",
+            title="Car Dealership API",
+            swagger_js_url="/static/swagger-ui-bundle.js",
+            swagger_css_url="/static/swagger-ui.css",
+        )
 
     # CORS — accept any localhost port (frontend may use 5173, 5174, …)
     app.add_middleware(
@@ -32,6 +47,10 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def add_csp_headers(request, call_next):
+        # Skip CSP for Swagger UI and its static assets so the inline
+        # initializer script and favicon load without policy violations.
+        if request.url.path.startswith(("/docs", "/static", "/openapi.json")):
+            return await call_next(request)
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
