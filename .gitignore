@@ -25,4 +25,4 @@ dist/
 Thumbs.db
 
 # AI
-.qwen/
+.qwen/".coverage"  
