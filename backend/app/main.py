@@ -6,6 +6,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import auth, vehicles
+from app.core.config import settings
 from app.core.database import Base, engine
 
 
@@ -36,10 +37,12 @@ def create_app() -> FastAPI:
             swagger_css_url="/static/swagger-ui.css",
         )
 
-    # CORS — accept any localhost port (frontend may use 5173, 5174, …)
+    # CORS — configured via CORS_ORIGINS env var (JSON array of origins).
+    # Defaults to localhost:5173 for development. For production, set to
+    # your frontend domain(s), e.g. ["https://myapp.vercel.app"].
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

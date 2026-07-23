@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
 from pydantic_settings import BaseSettings
 
 
@@ -11,6 +16,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_LOGIN: str = "5/minute"
     RATE_LIMIT_REGISTER: str = "3/hour"
     COOKIE_SECURE: bool = True
+    CORS_ORIGINS: str = '["http://localhost:5173"]'
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return json.loads(self.CORS_ORIGINS)
 
     model_config = {"env_file": ".env", "case_sensitive": True}
 
